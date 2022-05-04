@@ -10,10 +10,10 @@ services:
       - ./docker/php/conf.d/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
       - ./docker/php/conf.d/error_reporting.ini:/usr/local/etc/php/conf.d/error_reporting.ini
     depends_on:
-      - mariadb
+      - db
 
   nginx:
-    image: nginx:latest
+    image: nginx:${NGINX_V}
     container_name: ${APP_NAME:?err}-nginx
     ports:
       - '80:80'
@@ -24,21 +24,26 @@ services:
       - './app:/var/www/html'
       - './config/nginx:/etc/nginx/conf.d'
 
-  mariadb:
-    image: mariadb:latest
-    container_name: ${APP_NAME:?err}-mariadb
-    restart: 'on-failure'
+  db:
+    image: mysql:${MYSQL_V}
+    restart: always
+    container_name: ${APP_NAME:?err}-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?err}
+      MYSQL_ROOT_PASSWORD: ${SQL_PASSWORD} 
+      MYSQL_DATABASE: ${SQL_DB}
     ports:
       - 3306:3306
-    volumes:
-      - ${PWD}
+    cap_add:
+      - SYS_NICE  # CAP_SYS_NICE
 
-  adminer:
-    image: adminer:latest
-    container_name: ${APP_NAME:?err}-adminer
-    environment:
-      ADMINER_DEFAULT_SERVER: mariadb
+  phpmyadmin:
+    image: phpmyadmin:${PHPMYADMIN}
+    container_name: ${APP_NAME:?err}-phpmyadmin
+    restart: always
     ports:
-      - 8080:8080
+      - 8080:80
+    environment:
+      PMA_USER: ${SQL_USER}
+      PMA_PASSWORD: ${SQL_PASSWORD}
+    depends_on:
+      - db
